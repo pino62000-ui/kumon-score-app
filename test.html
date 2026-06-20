@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>単体テスト — 公文スコア推移</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; color: #333; }
+    h1 { font-size: 1.3rem; }
+    #summary { font-size: 1.1rem; font-weight: bold; margin: 1rem 0; }
+    ul { list-style: none; padding: 0; }
+    li { padding: .3rem .6rem; border-radius: 6px; margin-bottom: .2rem; }
+    .pass { background: #e7f7e7; }
+    .fail { background: #fde7e7; color: #b00; }
+    .grp { margin-top: 1rem; font-weight: bold; color: #666; }
+  </style>
+</head>
+<body>
+  <h1>単体テスト — score / badge / char</h1>
+  <div id="summary">実行中…</div>
+  <ul id="results"></ul>
+
+  <!-- テスト対象（純粋関数）。storageは不要 -->
+  <script src="js/score.js"></script>
+  <script src="js/badge.js"></script>
+  <script src="js/char.js"></script>
+
+  <script>
+    const results = document.getElementById('results');
+    let pass = 0, fail = 0;
+
+    function group(name) {
+      const li = document.createElement('li');
+      li.className = 'grp'; li.textContent = '― ' + name + ' ―';
+      results.appendChild(li);
+    }
+    function test(name, fn) {
+      try { fn(); add(true, name); }
+      catch (e) { add(false, name + ' … ' + e.message); console.error(name, e); }
+    }
+    function add(ok, name) {
+      const li = document.createElement('li');
+      li.className = ok ? 'pass' : 'fail';
+      li.textContent = (ok ? '✅ ' : '❌ ') + name;
+      results.appendChild(li);
+      ok ? pass++ : fail++;
+    }
+    function eq(actual, expected, msg) {
+      const a = JSON.stringify(actual), e = JSON.stringify(expected);
+      if (a !== e) throw new Error(`${msg || ''} got ${a}, want ${e}`);
+    }
+    const sorted = arr => [...arr].sort();
+
+    // ===== calcScore =====
+    group('calcScore（スコア計算）');
+    test('初回(best=null)＝はじめて+30', () => {
+      const r = calcScore(10, 510, null);
+      eq([r.secondsPerSheet, r.basePoints, r.speedBonus, r.fullSetBonus, r.earnedPoints, r.isBest],
+         [51, 100, 30, 30, 160, true]);
+    });
+    test('自己ベスト更新＝+50', () => {
+      const r = calcScore(10, 650, 70);   // 65秒/枚 < 70
+      eq([r.secondsPerSheet, r.speedBonus, r.earnedPoints, r.isBest], [65, 50, 180, true]);
+    });
+    test('好調(ベスト×1.1以内)＝+20', () => {
+      const r = calcScore(10, 700, 65);   // 70 <= 71.5
+      eq([r.speedBonus, r.earnedPoints, r.isBest], [20, 150, false]);
+    });
+    test('不調(1.1超)＝+0', () => {
+      const r = calcScore(10, 800, 65);   // 80 > 71.5
+      eq([r.speedBonus, r.earnedPoints, r.isBest], [0, 130, false]);
+    });
+    test('5枚・更新＝基礎50＋更新50（フル無し）', () => {
+      const r = calcScore(5, 300, 65);    // 60 < 65
+      eq([r.basePoints, r.speedBonus, r.fullSetBonus, r.earnedPoints], [50, 50, 0, 100]);
+    });
+    test('端数は四捨五入(3枚100秒→33秒/枚)', () => {
+      const r = calcScore(3, 100, null);
+      eq([r.secondsPerSheet, r.basePoints, r.earnedPoints], [33, 30, 60]);
+    });
+
+    // ===== getCharLevel / pointsToNextLevel / familyMonthlyPoints =====
+    group('char（キャラ育成）');
+    const lv = p => getCharLevel(p).level;
+    test('しきい値境界 0/799/800/2399/2400', () => eq([lv(0), lv(799), lv(800), lv(2399), lv(2400)], [1, 1, 2, 2, 3]));
+    test('しきい値境界 4799/4800/7999/8000/99999', () => eq([lv(4799), lv(4800), lv(7999), lv(8000), lv(99999)], [3, 4, 4, 5, 5]));
+    test('次レベルまでの残りpt', () => eq([pointsToNextLevel(0), pointsToNextLevel(4200), pointsToNextLevel(8000)], [800, 600, 0]));
+    test('家族合計＝2人の和', () => {
+      eq(familyMonthlyPoints({ profiles: [{ monthlyPoints: 2400 }, { monthlyPoints: 1800 }] }), 4200);
+      eq(familyMonthlyPoints({ profiles: [{ monthlyPoints: 0 }, { monthlyPoints: 1800 }] }), 1800);
+    });
+    test('画像URLは月キー付き', () => eq(charImageUrl({ image: 'char_3.png' }, '2026-07'), 'img/char_3.png?m=2026-07'));
+
+    // ===== 週の達成 =====
+    group('週の達成（countDaysThisWeek / calcWeekStreak）');
+    const THU = new Date('2026-06-18T12:00:00'); // 木曜（週は6/15月〜6/21日）
+    const recs = ds => ds.map(d => ({ date: d }));
+    test('今週の範囲は月〜日', () => eq(thisWeekRange(THU), { start: '2026-06-15', end: '2026-06-21' }));
+    test('今週の記録日数(15,16,17,18→4)', () => eq(countDaysThisWeek(recs(['2026-06-15','2026-06-16','2026-06-17','2026-06-18']), THU), 4));
+    test('同日重複は1日として数える', () => eq(countDaysThisWeek(recs(['2026-06-15','2026-06-15']), THU), 1));
+    test('連続達成週数＝2（今週4・先週4・先々週2）', () => {
+      const r = recs(['2026-06-15','2026-06-16','2026-06-17','2026-06-18',
+                      '2026-06-08','2026-06-09','2026-06-10','2026-06-11',
+                      '2026-06-01','2026-06-02']);
+      eq(calcWeekStreak(r, THU), 2);
+    });
+    test('今週が進行中(未達)でも先週達成なら継続＝1', () => {
+      const r = recs(['2026-06-15','2026-06-16',
+                      '2026-06-08','2026-06-09','2026-06-10','2026-06-11']);
+      eq(calcWeekStreak(r, THU), 1);
+    });
+
+    // ===== checkBadges =====
+    group('checkBadges（バッジ判定）');
+    test('10枚＋更新で perfect/speed_star/full_set/weekly_goal', () => {
+      const records = [
+        { date: '2026-06-15', subject: '算数', level: 'B' },
+        { date: '2026-06-16', subject: '算数', level: 'B' },
+        { date: '2026-06-17', subject: '算数', level: 'B' },
+        { date: '2026-06-18', subject: '算数', level: 'B', speedBonus: 50, fullSetBonus: 30 },
+      ];
+      const newRec = records[3];
+      const profile = { records, badges: [] };
+      eq(sorted(checkBadges(profile, newRec, THU)), sorted(['speed_star', 'full_set', 'perfect', 'weekly_goal']));
+    });
+    test('獲得済みバッジは除外される', () => {
+      const records = [
+        { date: '2026-06-15', subject: '算数', level: 'B' },
+        { date: '2026-06-16', subject: '算数', level: 'B' },
+        { date: '2026-06-17', subject: '算数', level: 'B' },
+        { date: '2026-06-18', subject: '算数', level: 'B', speedBonus: 50, fullSetBonus: 30 },
+      ];
+      const profile = { records, badges: [{ id: 'full_set' }] };
+      eq(sorted(checkBadges(profile, records[3], THU)), sorted(['speed_star', 'perfect', 'weekly_goal']));
+    });
+    test('初レベルは level_up（記録1件のみ）', () => {
+      const newRec = { date: '2026-06-18', subject: '算数', level: 'B', speedBonus: 0, fullSetBonus: 0 };
+      const profile = { records: [newRec], badges: [] };
+      eq(checkBadges(profile, newRec, THU), ['level_up']);
+    });
+
+    // ===== 集計 =====
+    document.getElementById('summary').textContent =
+      `結果： ${pass} / ${pass + fail} 通過` + (fail ? `　❌ ${fail} 件 失敗` : '　🎉 全テスト通過');
+    document.getElementById('summary').style.color = fail ? '#b00' : '#1a7';
+  </script>
+</body>
+</html>

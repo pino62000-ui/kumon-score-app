@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>公文スコア推移</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#ff9f43" />
+  <link rel="icon" href="icon.svg" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="くもんスコア" />
+</head>
+<body>
+
+  <!-- ① プロフィール選択画面 -->
+  <section id="profile-select" class="fullscreen">
+    <h1 class="title">くもんスコア</h1>
+    <p class="subtitle">だれがやる？</p>
+    <div class="profile-cards" id="profile-cards"></div>
+    <p class="shared-char-line" id="ps-char">読み込み中…</p>
+  </section>
+
+  <!-- アプリ本体（サイドバー＋コンテンツ） -->
+  <div id="app" class="app hidden">
+
+    <nav class="sidebar">
+      <button class="nav-btn" data-target="home"><span>🏠</span>ホーム</button>
+      <button class="nav-btn" data-target="graph"><span>📊</span>グラフ</button>
+      <button class="nav-btn" data-target="badge"><span>🏅</span>バッジ</button>
+      <button class="nav-btn" data-target="summary"><span>📋</span>まとめ</button>
+      <button class="nav-btn nav-gear" data-target="settings"><span>⚙️</span>せってい</button>
+      <button class="nav-btn nav-switch" id="btn-switch"><span>🔄</span>きりかえ</button>
+    </nav>
+
+    <main class="content">
+
+      <!-- ② ホーム -->
+      <section class="screen" id="screen-home">
+        <header class="screen-head"><span id="home-icon">🐰</span> <span id="home-name">はな</span></header>
+        <div class="card">きょうのポイント <b id="home-today">0pt</b> ／ あなたの今月 <b id="home-month">0pt</b></div>
+        <div class="card char-card">
+          <div class="char-img" id="home-char-img">🐤</div>
+          <div>
+            <div>かぞくのキャラ：<b id="home-char-title">―</b>（ふたりでそだてる）</div>
+            <div id="home-contrib">―</div>
+            <div id="home-next">―</div>
+          </div>
+        </div>
+        <div class="card" id="home-week">🔥 今週 0/4日</div>
+        <button class="primary-btn" data-target="record">＋ きろくする</button>
+      </section>
+
+      <!-- ③ 記録入力 -->
+      <section class="screen" id="screen-record">
+        <header class="screen-head">きろくする</header>
+        <div class="record-layout">
+          <div class="record-form">
+            <div class="field">
+              <span class="field-label">日づけ</span>
+              <input type="date" id="rec-date" />
+            </div>
+            <div class="field">
+              <span class="field-label">きょうか</span>
+              <div class="chip-row" id="rec-subjects">
+                <button class="chip" data-subject="算数">さんすう</button>
+                <button class="chip" data-subject="国語">こくご</button>
+                <button class="chip" data-subject="英語">えいご</button>
+              </div>
+              <div class="muted">レベル：<b id="rec-level">―</b>（じどう）</div>
+            </div>
+            <div class="field">
+              <span class="field-label">まい数</span>
+              <div class="chip-row" id="rec-sheets"></div>
+            </div>
+            <div class="field">
+              <span class="field-label">じかん</span>
+              <div class="time-row">
+                <input type="number" id="rec-min" min="0" value="0" /> 分
+                <input type="number" id="rec-sec" min="0" max="59" value="0" /> 秒
+                <button class="timer-btn" id="rec-timer">▶ スタート</button>
+              </div>
+            </div>
+            <div class="field">
+              <span class="field-label">ひとこと（にんい）</span>
+              <input type="text" id="rec-comment" maxlength="50" />
+            </div>
+          </div>
+
+          <aside class="record-preview">
+            <div class="preview-title">ポイント</div>
+            <div class="preview-pt"><span id="pv-earned">0</span> pt</div>
+            <div class="preview-line">きそ　　　<b id="pv-base">0</b></div>
+            <div class="preview-line">スピード　<b id="pv-speed">0</b> <span id="pv-best"></span></div>
+            <div class="preview-line">フルセット <b id="pv-full">0</b></div>
+            <div class="preview-line muted" id="pv-persheet">―</div>
+            <button class="primary-btn" id="rec-submit">きろくする</button>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ④ グラフ -->
+      <section class="screen" id="screen-graph">
+        <header class="screen-head">グラフ</header>
+        <div class="graph-controls">
+          <select id="graph-subject">
+            <option value="">ぜんぶ</option>
+            <option value="算数">さんすう</option>
+            <option value="国語">こくご</option>
+            <option value="英語">えいご</option>
+          </select>
+          <div class="chip-row" id="graph-tabs">
+            <button class="chip selected" data-tab="points">獲得pt</button>
+            <button class="chip" data-tab="total">るいけいpt</button>
+            <button class="chip" data-tab="time">じかん</button>
+            <button class="chip" data-tab="sheets">まい数</button>
+          </div>
+        </div>
+        <div class="graph-area">
+          <canvas id="graph-canvas"></canvas>
+          <p class="muted graph-empty hidden" id="graph-empty">まだ きろくが ないよ</p>
+        </div>
+      </section>
+
+      <!-- ⑤ バッジ -->
+      <section class="screen" id="screen-badge">
+        <header class="screen-head">バッジ</header>
+        <h3 class="badge-group">獲得ずみ <span id="badge-got-count"></span></h3>
+        <div class="badge-grid" id="badge-got"></div>
+        <h3 class="badge-group">まだ もらってない <span id="badge-lock-count"></span></h3>
+        <div class="badge-grid" id="badge-lock"></div>
+      </section>
+
+      <!-- ⑥ まとめ -->
+      <section class="screen" id="screen-summary">
+        <header class="screen-head">まとめ</header>
+        <div class="chip-row" id="summary-period">
+          <button class="chip selected" data-period="week">今週</button>
+          <button class="chip" data-period="month">今月</button>
+        </div>
+        <div class="summary-layout">
+          <div class="card" id="summary-stats"></div>
+          <div class="card" id="summary-subjects"></div>
+        </div>
+      </section>
+
+      <!-- ⑦ 設定（保護者） -->
+      <section class="screen" id="screen-settings">
+        <header class="screen-head">せってい（おうちのひと）</header>
+
+        <div class="set-section">
+          <h3>きょうざいレベル</h3>
+          <div id="set-levels"></div>
+        </div>
+
+        <div class="set-section">
+          <h3>きろくの しゅうせい・さくじょ</h3>
+          <select id="set-rec-profile"></select>
+          <div id="set-records" class="rec-list"></div>
+        </div>
+
+        <div class="set-section">
+          <h3>バックアップ</h3>
+          <button class="mini-btn" id="set-export">書き出し</button>
+          <label class="mini-btn">読み込み
+            <input type="file" id="set-import" accept="application/json" hidden />
+          </label>
+        </div>
+
+        <div class="set-section">
+          <h3>こうかおん</h3>
+          <label><input type="checkbox" id="set-sound" /> こうかおんを ならす</label>
+        </div>
+
+        <div class="set-section">
+          <h3>月リセット</h3>
+          <p class="muted">こんげつを とじて、あたらしいキャラを はじめます（みんなのポイントが 0 に なります）。</p>
+          <button class="mini-btn danger" id="set-reset">月リセット じっこう</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- 達成演出オーバーレイ -->
+  <div id="result-overlay" class="overlay hidden">
+    <div class="result-card">
+      <div class="result-pt"><span id="res-earned">0</span> pt ゲット！</div>
+      <div id="res-best" class="result-line"></div>
+      <div id="res-char" class="result-line"></div>
+      <div id="res-badges" class="result-badges"></div>
+      <button class="primary-btn" id="res-close">とじる</button>
+    </div>
+  </div>
+
+  <script src="lib/chart.min.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/score.js"></script>
+  <script src="js/badge.js"></script>
+  <script src="js/char.js"></script>
+  <script src="js/chart.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
