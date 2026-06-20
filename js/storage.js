@@ -39,8 +39,8 @@ function defaultData() {
     monthKey: monthOf(todayStr()),
     settings: { sound: true },
     profiles: [
-      makeProfile('profile_1', 'はな', '🐰', 'img/icon_hana.png'),
-      makeProfile('profile_2', 'そら', '🐻', 'img/icon_sora.png')
+      makeProfile('profile_1', 'さくらうま', '🐴', 'img/icon_hana.png'),
+      makeProfile('profile_2', 'さくらちゃん', '😽', 'img/icon_sora.png')
     ]
   };
 }
@@ -71,10 +71,17 @@ function saveData(data) {
 }
 // 既存データに後から追加したフィールドを補完する（記録は壊さず追記のみ）
 const DEFAULT_ICON_IMG = { profile_1: 'img/icon_hana.png', profile_2: 'img/icon_sora.png' };
+// 旧 name のときだけ新しい name・絵文字へ置き換える（1回限りの改名）
+const PROFILE_RENAME = {
+  profile_1: { from: 'はな', name: 'さくらうま',   icon: '🐴' },
+  profile_2: { from: 'そら', name: 'さくらちゃん', icon: '😽' }
+};
 function migrateData(data) {
   let changed = false;
   data.profiles.forEach(p => {
     if (p.iconImg == null) { p.iconImg = DEFAULT_ICON_IMG[p.id] || ''; changed = true; }
+    const r = PROFILE_RENAME[p.id];
+    if (r && p.name === r.from) { p.name = r.name; p.icon = r.icon; changed = true; }
   });
   if (changed) saveData(data);
 }
