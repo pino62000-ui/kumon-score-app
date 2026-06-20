@@ -2,7 +2,7 @@
 // アプリの資産をキャッシュし、オフラインでも起動できるようにする。
 // 資産を更新したら CACHE の版数（v1 → v2…）を上げること。
 
-const CACHE = 'kumon-v2';
+const CACHE = 'kumon-v3';
 const SHELL = [
   './',
   'index.html',
