@@ -46,6 +46,9 @@ html, body {
 }
 .profile-card:active { transform: scale(.96); }
 .profile-icon { font-size: 4rem; }
+/* アイコン画像（iconImg）の表示：正方形を丸く切り抜く */
+.profile-icon .icon-img { width: 5rem; height: 5rem; border-radius: 50%; object-fit: cover; vertical-align: middle; }
+#home-icon .icon-img { width: 1.4em; height: 1.4em; border-radius: 50%; object-fit: cover; vertical-align: middle; }
 .profile-name { font-size: 1.5rem; font-weight: bold; }
 .shared-char-line { color: var(--muted); font-size: 1.1rem; }
 

@@ -236,6 +236,21 @@ function setCharImage(el, stage, monthKey) {
   el.appendChild(img);
 }
 
+// プロフィールのアイコンを描画（iconImg があれば画像、無ければ・読み込み失敗なら絵文字）
+function setProfileIcon(el, profile) {
+  el.textContent = '';
+  if (profile.iconImg) {
+    const img = document.createElement('img');
+    img.src = profile.iconImg;
+    img.alt = profile.name;
+    img.className = 'icon-img';
+    img.onerror = () => { el.textContent = profile.icon; };
+    el.appendChild(img);
+  } else {
+    el.textContent = profile.icon;
+  }
+}
+
 // ---- プロフィール選択画面の描画 ----
 function renderProfileSelect() {
   const data = getData();
@@ -246,7 +261,13 @@ function renderProfileSelect() {
   data.profiles.forEach(p => {
     const btn = document.createElement('button');
     btn.className = 'profile-card';
-    btn.innerHTML = `<span class="profile-icon">${p.icon}</span><span class="profile-name">${p.name}</span>`;
+    const ic = document.createElement('span');
+    ic.className = 'profile-icon';
+    setProfileIcon(ic, p);
+    const nm = document.createElement('span');
+    nm.className = 'profile-name';
+    nm.textContent = p.name;
+    btn.append(ic, nm);
     btn.addEventListener('click', () => selectProfile(p.id));
     wrap.appendChild(btn);
   });
@@ -269,7 +290,7 @@ function renderHome() {
   const todayPts = profile.records
     .filter(r => r.date === today)
     .reduce((s, r) => s + r.earnedPoints, 0);
-  document.getElementById('home-icon').textContent = profile.icon;
+  setProfileIcon(document.getElementById('home-icon'), profile);
   document.getElementById('home-name').textContent = profile.name;
   document.getElementById('home-today').textContent = todayPts + 'pt';
   document.getElementById('home-month').textContent = profile.monthlyPoints + 'pt';

@@ -29,8 +29,9 @@ function makeLevels() {
   });
   return levels;
 }
-function makeProfile(id, name, icon) {
-  return { id, name, icon, monthlyPoints: 0, levels: makeLevels(), records: [], badges: [] };
+function makeProfile(id, name, icon, iconImg) {
+  // iconImg: アイコン画像のパス（img/ 配下）。空なら絵文字 icon を表示する
+  return { id, name, icon, iconImg: iconImg || '', monthlyPoints: 0, levels: makeLevels(), records: [], badges: [] };
 }
 function defaultData() {
   return {
@@ -38,8 +39,8 @@ function defaultData() {
     monthKey: monthOf(todayStr()),
     settings: { sound: true },
     profiles: [
-      makeProfile('profile_1', 'はな', '🐰'),
-      makeProfile('profile_2', 'そら', '🐻')
+      makeProfile('profile_1', 'はな', '🐰', 'img/icon_hana.png'),
+      makeProfile('profile_2', 'そら', '🐻', 'img/icon_sora.png')
     ]
   };
 }
@@ -55,6 +56,7 @@ function getData() {
     }
     const data = JSON.parse(raw);
     if (!data || !Array.isArray(data.profiles)) throw new Error('壊れたデータ');
+    migrateData(data);   // 後から追加したフィールドを既存データに補完
     return data;
   } catch (e) {
     // 壊れている／空のときは初期化（破壊前にバックアップを促す運用は別途）
@@ -66,6 +68,15 @@ function getData() {
 }
 function saveData(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+// 既存データに後から追加したフィールドを補完する（記録は壊さず追記のみ）
+const DEFAULT_ICON_IMG = { profile_1: 'img/icon_hana.png', profile_2: 'img/icon_sora.png' };
+function migrateData(data) {
+  let changed = false;
+  data.profiles.forEach(p => {
+    if (p.iconImg == null) { p.iconImg = DEFAULT_ICON_IMG[p.id] || ''; changed = true; }
+  });
+  if (changed) saveData(data);
 }
 function getProfile(id) {
   return getData().profiles.find(p => p.id === id) || null;
